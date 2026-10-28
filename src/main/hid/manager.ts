@@ -1,6 +1,6 @@
 // Device manager: enumerates HID devices, attaches a driver per model, polls status, keeps a packet log.
 import { EventEmitter } from 'node:events';
-import { appendFileSync, existsSync, mkdirSync } from 'node:fs';
+import { accessSync, appendFileSync, constants, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { app } from 'electron';
 import type { Device } from 'node-hid';
@@ -29,6 +29,7 @@ export class DeviceManager extends EventEmitter {
   private statusTimer: NodeJS.Timeout | null = null;
   private lastSignature = '';
   private failedSignatures = new Map<string, number>();
+  private warnedAccess = new Set<string>();
 
   start(): void {
     for (const id of (process.env.AULA_SIM ?? '').split(',').map((x) => x.trim()).filter(Boolean)) {
@@ -139,7 +140,7 @@ export class DeviceManager extends EventEmitter {
         const lastFail = this.failedSignatures.get(gsig) ?? 0;
         if (!force && Date.now() - lastFail < 15000) continue;
         const drv = await this.attach(g.model, g.devices);
-        if (!drv) { this.failedSignatures.set(gsig, Date.now()); continue; }
+        if (!drv) { this.failedSignatures.set(gsig, Date.now()); this.checkAccess(g.model, g.devices); continue; }
         this.failedSignatures.delete(gsig);
         this.drivers.set(drv.key, drv);
         this.statuses.set(drv.key, { key: drv.key, modelId: drv.model.id, link: drv.link, productName: drv.productName, battery: null, charging: false });
@@ -152,6 +153,18 @@ export class DeviceManager extends EventEmitter {
     } finally {
       this.scanning = false;
     }
+  }
+
+  /** Linux: hidraw nodes are root-only unless a udev rule hands them to the logged-in user. */
+  private checkAccess(model: DeviceModel, devices: Device[]): void {
+    if (process.platform !== 'linux') return;
+    const denied = [...new Set(devices.map((d) => d.path ?? ''))].filter((p) => {
+      try { accessSync(p, constants.R_OK | constants.W_OK); return false; } catch { return true; }
+    });
+    const key = denied.join('|');
+    if (!denied.length || this.warnedAccess.has(key)) return;
+    this.warnedAccess.add(key);
+    this.addLog('!', `${model.name}: no permission to open ${denied.join(', ')}; install the udev rule (see README, "Linux") and reconnect the device`);
   }
 
   private attach(model: DeviceModel, devices: Device[]): Promise<Driver | null> {

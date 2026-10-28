@@ -1,4 +1,4 @@
-// Persistent settings: one JSON file per device model plus app preferences, under %APPDATA%/AULA Toolkit.
+// Persistent settings: one JSON file per device model plus app preferences, under %APPDATA%/AULA Toolkit (~/.config/AULA Toolkit on Linux).
 import { app } from 'electron';
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';

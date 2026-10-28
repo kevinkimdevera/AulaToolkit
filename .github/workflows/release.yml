@@ -23,11 +23,10 @@ permissions:
   contents: write
 
 jobs:
-  build-and-release:
+  build-windows:
     runs-on: windows-2022
     env:
       VERSION: ${{ github.event.inputs.version }}
-      CHANNEL: ${{ github.event.inputs.channel }}
 
     steps:
       - name: Checkout
@@ -62,16 +61,82 @@ jobs:
           npx electron-vite build
           npx electron-builder --win --publish never
 
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          if-no-files-found: error
+          path: |
+            release/AULA-Toolkit-Setup-${{ env.VERSION }}.exe
+            release/AULA-Toolkit-Setup-${{ env.VERSION }}.exe.blockmap
+            release/AULA-Toolkit-${{ env.VERSION }}-portable.exe
+            release/latest.yml
+
+  build-linux:
+    runs-on: ubuntu-22.04
+    env:
+      VERSION: ${{ github.event.inputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Check version
+        run: |
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then echo "::error::Invalid version '$VERSION'. Expected X.Y.Z"; exit 1; fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Set version
+        run: npm version ${{ env.VERSION }} --no-git-tag-version --allow-same-version
+
+      - name: Check and test
+        run: |
+          npm run typecheck
+          npm test
+
+      - name: Build
+        run: |
+          npx electron-vite build
+          npx electron-builder --linux --publish never
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          if-no-files-found: error
+          path: |
+            release/AULA-Toolkit-${{ env.VERSION }}.AppImage
+            release/aula-toolkit_${{ env.VERSION }}_amd64.deb
+            release/latest-linux.yml
+
+  release:
+    needs: [build-windows, build-linux]
+    runs-on: ubuntu-22.04
+    env:
+      VERSION: ${{ github.event.inputs.version }}
+      CHANNEL: ${{ github.event.inputs.channel }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download builds
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
       - name: Create release
-        shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $files = @(
-            "release/AULA-Toolkit-Setup-$env:VERSION.exe",
-            "release/AULA-Toolkit-Setup-$env:VERSION.exe.blockmap",
-            "release/AULA-Toolkit-$env:VERSION-portable.exe",
-            "release/latest.yml"
-          )
-          $kind = if ($env:CHANNEL -eq 'Beta') { '--prerelease' } else { '--latest' }
-          gh release create "v$env:VERSION" @files --target $env:GITHUB_SHA --title "AULA Toolkit v$env:VERSION ($env:CHANNEL)" --notes-file .github/release-notes.md $kind
+          if [ "$CHANNEL" = Beta ]; then kind=--prerelease; else kind=--latest; fi
+          gh release create "v$VERSION" dist/* --target "$GITHUB_SHA" --title "AULA Toolkit v$VERSION ($CHANNEL)" --notes-file .github/release-notes.md $kind

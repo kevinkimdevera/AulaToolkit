@@ -3,6 +3,8 @@
   "productName": "AULA Toolkit",
   "version": "0.1.0",
   "description": "Unofficial open-source control app for AULA keyboards and mice",
+  "homepage": "https://github.com/Livvaa/aula-toolkit",
+  "desktopName": "aula-toolkit.desktop",
   "main": "./out/main/index.js",
   "author": "Livvaa",
   "license": "GPL-3.0-or-later",
@@ -14,6 +16,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.web.json && tsc --noEmit -p tsconfig.node.json",
     "test": "vitest run",
     "dist": "electron-vite build && electron-builder --win",
+    "dist:linux": "electron-vite build && electron-builder --linux",
     "screenshots": "electron-vite build && node scripts/screenshots.cjs"
   },
   "dependencies": {

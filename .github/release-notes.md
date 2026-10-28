@@ -29,6 +29,8 @@
 |---|---|
 | `AULA-Toolkit-Setup-*.exe` | Installer with automatic updates (recommended) |
 | `AULA-Toolkit-*-portable.exe` | Portable, no installation, no automatic updates |
+| `AULA-Toolkit-*.AppImage` | Linux, any distribution, with automatic updates |
+| `aula-toolkit_*_amd64.deb` | Linux, Debian / Ubuntu; installs the device permission rule |
 
 ## Known Issues
 

@@ -8,7 +8,7 @@
   [![Release Date](https://img.shields.io/github/release-date-pre/Livvaa/aula-toolkit?logo=github&logoColor=white&label=updated)](https://github.com/Livvaa/aula-toolkit/releases)
   [![Downloads](https://img.shields.io/github/downloads/Livvaa/aula-toolkit/total?color=brightgreen)](https://github.com/Livvaa/aula-toolkit/releases)
   <br>
-  [![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011-0078D6?logo=windows&logoColor=white)](https://github.com/Livvaa/aula-toolkit)
+  [![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011%20%7C%20Linux-0078D6?logo=windows&logoColor=white)](https://github.com/Livvaa/aula-toolkit)
   [![Electron](https://img.shields.io/badge/Electron-React%20%2B%20TypeScript-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
   [![Architecture](https://img.shields.io/badge/Arch-x64-informational?logo=intel&logoColor=white)](https://github.com/Livvaa/aula-toolkit)
   [![License](https://img.shields.io/badge/License-GPLv3-informational?logo=gnu&logoColor=white)](LICENSE)
@@ -30,7 +30,7 @@
 
 ---
 
-AULA Toolkit is a Windows desktop app that controls AULA keyboards and mice from one place, in the spirit of Logitech G HUB. It replaces the separate driver that AULA ships for every model.
+AULA Toolkit is a desktop app for Windows and Linux that controls AULA keyboards and mice from one place, in the spirit of Logitech G HUB. It replaces the separate driver that AULA ships for every model.
 
 It runs no background services, keeps no telemetry and only talks to the internet to check GitHub for updates. Changes are written to the device the moment you make them and are stored in the device's own memory, so they keep working on other computers and over Bluetooth.
 
@@ -82,6 +82,25 @@ AULA Toolkit talks to your devices with protocols that were reverse-engineered f
 Two builds are published with every release:
 * **Installer** — installs for the current user only, so no administrator rights are needed.
 * **Portable** — a single `.exe` that runs without installing.
+
+On Linux (x64), two more builds are published; see [Linux](#linux) for the one-time setup:
+* **AppImage** — a single file that runs on most distributions and updates itself.
+* **.deb** — for Debian, Ubuntu and derivatives; also installs the device permission rule and the `aula` command.
+
+#### Linux
+
+Linux only lets root open HID devices by default. AULA Toolkit ships a udev rule that gives the logged-in user access to supported AULA devices, and nothing else.
+
+* **.deb**: `sudo apt install ./aula-toolkit_<version>_amd64.deb` installs the rule for you. Unplug and replug the device once afterwards.
+* **AppImage**: install the rule once, then replug the device:
+  ```sh
+  sudo curl -L -o /etc/udev/rules.d/70-aula-toolkit.rules https://raw.githubusercontent.com/Livvaa/aula-toolkit/main/resources/linux/70-aula-toolkit.rules
+  sudo udevadm control --reload-rules && sudo udevadm trigger
+  chmod +x AULA-Toolkit-<version>.AppImage && ./AULA-Toolkit-<version>.AppImage
+  ```
+  The AppImage uses FUSE 3 when it is available and otherwise extracts itself to a temporary folder; no `libfuse2` is needed.
+
+If a device is listed but never attaches, the log (**Settings → General → Advanced**) says when it is missing permissions. The tray summary that opens on hover is not available on Linux, where tray icons only offer their menu; closing and blocking the official AULA software is Windows only, since it does not exist for Linux.
 
 #### Updating
 
@@ -190,7 +209,7 @@ Turn on **Settings → General → Battery statistics** to see a battery card in
 
 ### CLI
 
-You can control AULA Toolkit from the command line. The command is called `aula` and is installed in `resources\bin` inside the install folder (by default `%LOCALAPPDATA%\Programs\AULA Toolkit\resources\bin\aula.cmd`). Add that folder to your `PATH` to call it from anywhere. **Settings → General → Command line** shows the exact path with a copy button.
+You can control AULA Toolkit from the command line. The command is called `aula` and is installed in `resources\bin` inside the install folder (by default `%LOCALAPPDATA%\Programs\AULA Toolkit\resources\bin\aula.cmd`). Add that folder to your `PATH` to call it from anywhere. On Linux the .deb puts `aula` on the `PATH` for you. **Settings → General → Command line** shows the exact path with a copy button.
 
 The command talks to the running app. If AULA Toolkit is not running, `aula` starts it in the tray first. It does not need administrator rights.
 
@@ -287,7 +306,7 @@ Logs help a lot with any problem. **Always** attach them to your issues.
 
 #### Method 2: Log files
 1. Reproduce the problem.
-2. Open `Run` (Win+R), type `"%APPDATA%\AULA Toolkit\logs"` and press OK.
+2. Open `Run` (Win+R), type `"%APPDATA%\AULA Toolkit\logs"` and press OK. On Linux, open `~/.config/AULA Toolkit/logs`.
 3. Attach the newest `hid-<date>.log` file.
 
 You can also watch the log live in **Settings → General → Advanced**.

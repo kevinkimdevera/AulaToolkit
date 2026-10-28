@@ -1,9 +1,10 @@
 // Command-line control (`aula …`), in the spirit of Legion Toolkit's llt.exe.
 //
 // The running app listens on a per-user named pipe; the thin `aula` script (resources/cli/aula.js,
-// launched by resources/bin/aula.cmd) sends one JSON request per invocation and prints the reply.
+// launched by resources/bin/aula.cmd or resources/bin/aula) sends one JSON request per invocation and prints the reply.
 // Read-only commands are answered here; anything that changes a profile is forwarded to the renderer,
 // which owns the profiles, so the UI, the saved files and the device always stay in sync.
+import { rmSync } from 'node:fs';
 import net from 'node:net';
 import os from 'node:os';
 import { join } from 'node:path';
@@ -146,5 +147,7 @@ export function startCliServer(ctx: CliContext, log: (msg: string) => void): voi
     sock.on('error', () => undefined);
   });
   server.on('error', (e) => log(`CLI server unavailable: ${e.message}`));
+  // A Unix socket outlives a crashed app; the single-instance lock means a leftover one is stale.
+  if (process.platform !== 'win32') rmSync(pipeName(), { force: true });
   server.listen(pipeName(), () => log(`CLI listening on ${pipeName()}`));
 }
