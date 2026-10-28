@@ -48,7 +48,13 @@ export class Aula04Driver implements Driver {
       for (const d of pref) {
         if (await hasFeatureReport(d, 0, 65)) { ports.main = await HidPort.open(d); break; }
       }
-      ports.screenCandidates = usb.filter((d) => d.path !== ports.main?.path);
+      // Vendor collections first, one entry per path: on Linux a hidraw node is a whole interface and
+      // is listed once per collection, and a probe write there is not rejected before reaching the device.
+      const vendor = (d: Device): number => ((d.usagePage ?? 0) >= 0xff00 ? 0 : 1);
+      ports.screenCandidates = usb
+        .filter((d) => d.path !== ports.main?.path)
+        .sort((a, b) => vendor(a) - vendor(b))
+        .filter((d, i, all) => all.findIndex((x) => x.path === d.path) === i);
       if (!ports.main) ctx.log('!', `${model.name}: no collection answered a 64-byte feature read; is the keyboard in Bluetooth mode?`);
     }
 

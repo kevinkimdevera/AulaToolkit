@@ -13,7 +13,7 @@ import { fr } from '@shared/locales/fr';
 const L: Record<string, typeof en> = { en, tr, ru, zh, uk, vi, pt, es, de, fr };
 const tx = (k: keyof typeof en): string => (L[prefs?.language] ?? en)[k] ?? en[k];
 import type { DeviceStatus } from '@shared/types';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { electronApp, is, optimizer } from '@electron-toolkit/utils';
 import { CH, type AppPrefs } from '@shared/ipc';
@@ -81,7 +81,20 @@ const startDelayed = process.argv.includes('--delayed');
 function applyAutostart(p: AppPrefs): void {
   if (!app.isPackaged) return; // a dev run must not register electron.exe to start with Windows
   const on = typeof p.autostart === 'string' ? p.autostart !== 'off' : !!p.autostart;
-  app.setLoginItemSettings({ openAtLogin: on, args: on ? ['--hidden', ...(p.autostart === 'delayed' ? ['--delayed'] : [])] : [] });
+  setLoginItem(on, on ? ['--hidden', ...(p.autostart === 'delayed' ? ['--delayed'] : [])] : []);
+}
+
+/** Electron's login items cover Windows and macOS only; on Linux this writes an XDG autostart entry. */
+function setLoginItem(on: boolean, args: string[] = []): void {
+  if (process.platform !== 'linux') { app.setLoginItemSettings({ openAtLogin: on, args }); return; }
+  const file = join(app.getPath('appData'), 'autostart', 'aula-toolkit.desktop');
+  try {
+    if (!on) { rmSync(file, { force: true }); return; }
+    mkdirSync(dirname(file), { recursive: true });
+    // An AppImage runs from a temporary mount; APPIMAGE is the stable path of the file itself.
+    const exe = (process.env.APPIMAGE ?? process.execPath).replace(/["`$\\]/g, '\\$&');
+    writeFileSync(file, ['[Desktop Entry]', 'Type=Application', 'Name=AULA Toolkit', `Exec="${exe}" ${args.join(' ')}`.trim(), 'Icon=aula-toolkit', 'Terminal=false', 'X-GNOME-Autostart-enabled=true', ''].join('\n'));
+  } catch { /* best effort */ }
 }
 let prefs: AppPrefs;
 
@@ -225,7 +238,7 @@ function registerIpc(): void {
   ipcMain.handle(CH.VENDOR_KILL, () => vendor.killVendorApps());
   ipcMain.handle(CH.APP_FULL_RESET, async () => {
     quitting = true;
-    app.setLoginItemSettings({ openAtLogin: false });
+    setLoginItem(false);
     await manager.stop().catch(() => undefined);
     for (const sub of ['settings', 'battery', 'logs']) rmSync(join(app.getPath('userData'), sub), { recursive: true, force: true });
     app.relaunch();
@@ -258,7 +271,7 @@ function registerIpc(): void {
     await shell.openPath(dir);
   });
   ipcMain.handle(CH.APP_ACCENT, () => { try { const c = systemPreferences.getAccentColor(); return c ? `#${c.slice(0, 6)}` : null; } catch { return null; } });
-  ipcMain.handle(CH.APP_BUILD_INFO, () => ({ version: app.getVersion(), build: BUILD_STAMP, electron: process.versions.electron, chrome: process.versions.chrome, node: process.versions.node, cliPath: app.isPackaged ? join(process.resourcesPath, 'bin', 'aula.cmd') : join(app.getAppPath(), 'resources', 'cli', 'aula.js') }));
+  ipcMain.handle(CH.APP_BUILD_INFO, () => ({ version: app.getVersion(), build: BUILD_STAMP, electron: process.versions.electron, chrome: process.versions.chrome, node: process.versions.node, cliPath: app.isPackaged ? join(process.resourcesPath, 'bin', process.platform === 'win32' ? 'aula.cmd' : 'aula') : join(app.getAppPath(), 'resources', 'cli', 'aula.js') }));
   ipcMain.handle(CH.UPDATE_CHECK, () => updater.check());
   ipcMain.handle(CH.UPDATE_DOWNLOAD, () => updater.download());
   ipcMain.on(CH.UPDATE_INSTALL, () => { quitting = true; updater.install(); });

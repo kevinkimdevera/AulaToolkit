@@ -77,9 +77,9 @@ npm install
 npm run dev
 ```
 
-No device at hand? Start with simulated devices: `$env:AULA_SIM = "s75pro,sc900,f75"; npm run dev` (PowerShell).
+No device at hand? Start with simulated devices: `$env:AULA_SIM = "s75pro,sc900,f75"; npm run dev` (PowerShell), or `AULA_SIM=s75pro,sc900,f75 npm run dev` on Linux.
 
-Before opening a pull request, run `npm run typecheck` and `npm test`. `npm run dist` builds the installer and the portable exe into `release/`.
+Before opening a pull request, run `npm run typecheck` and `npm test`. `npm run dist` builds the installer and the portable exe into `release/`; `npm run dist:linux` builds the AppImage and the .deb.
 
 By contributing, you agree that your contributions are licensed under the [GNU General Public License v3.0 or later](LICENSE).
 

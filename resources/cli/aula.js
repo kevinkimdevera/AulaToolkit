@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // `aula` — command-line control for AULA Toolkit (like Legion Toolkit's llt.exe).
-// Runs as plain Node: the installed aula.cmd starts it with the app's own executable in
+// Runs as plain Node: the installed aula.cmd (aula on Linux) starts it with the app's own executable in
 // ELECTRON_RUN_AS_NODE mode, so no separate Node install is needed. It forwards its arguments to the
-// running app over a per-user named pipe and prints the answer. If the app is not running, it starts
+// running app over a per-user named pipe (a socket on Linux) and prints the answer. If the app is not running, it starts
 // it in the tray and waits for it.
 'use strict';
 const net = require('net');
@@ -39,10 +39,10 @@ function probe() {
   });
 }
 
-/** Starts the installed app hidden in the tray. Only possible when we run inside AULA Toolkit.exe. */
+/** Starts the installed app hidden in the tray. Only possible when we run inside the app's executable. */
 function launchApp() {
   const exe = process.execPath;
-  if (!/aula toolkit\.exe$/i.test(exe)) return false;
+  if (!/aula toolkit\.exe$|\/aula-toolkit$/i.test(exe)) return false;
   const env = { ...process.env };
   delete env.ELECTRON_RUN_AS_NODE;
   spawn(exe, ['--hidden'], { detached: true, stdio: 'ignore', env }).unref();

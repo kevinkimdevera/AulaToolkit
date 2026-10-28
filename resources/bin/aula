@@ -1,0 +1,5 @@
+#!/bin/sh
+# AULA Toolkit command-line launcher. Runs the CLI script with the app's own executable in Node mode,
+# so no separate Node.js install is needed. Usage: aula help
+here=$(dirname "$(readlink -f "$0")")
+ELECTRON_RUN_AS_NODE=1 exec "$here/../../aula-toolkit" "$here/../cli/aula.js" "$@"

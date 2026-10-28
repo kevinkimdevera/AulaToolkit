@@ -14,8 +14,8 @@ files:
 extraResources:
   - from: resources/cli
     to: cli
-  - from: resources/bin
-    to: bin
+# node-hid ships N-API prebuilds for every target, so there is nothing to compile against Electron.
+npmRebuild: false
 asarUnpack:
   - "**/node_modules/node-hid/**"
 win:
@@ -23,6 +23,9 @@ win:
     - nsis
     - portable
   icon: resources/icon.ico
+  extraResources:
+    - from: resources/bin/aula.cmd
+      to: bin/aula.cmd
 nsis:
   artifactName: AULA-Toolkit-Setup-${version}.${ext}
   license: LICENSE
@@ -31,3 +34,27 @@ nsis:
   perMachine: false
 portable:
   artifactName: AULA-Toolkit-${version}-portable.${ext}
+linux:
+  target:
+    - AppImage
+    - deb
+  executableName: aula-toolkit
+  syncDesktopName: true
+  icon: resources/icon.png
+  category: Utility
+  synopsis: Control app for AULA keyboards and mice
+  maintainer: Livvaa
+  extraResources:
+    - from: resources/bin/aula
+      to: bin/aula
+    - from: resources/linux/70-aula-toolkit.rules
+      to: linux/70-aula-toolkit.rules
+# Static AppImage runtime: no libfuse2 needed, which current distributions (Ubuntu 24.04+) no longer ship.
+toolsets:
+  appimage: "1.0.3"
+appImage:
+  artifactName: AULA-Toolkit-${version}.${ext}
+deb:
+  artifactName: aula-toolkit_${version}_${arch}.${ext}
+  afterInstall: resources/linux/after-install.sh
+  afterRemove: resources/linux/after-remove.sh
